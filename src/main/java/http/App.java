@@ -14,7 +14,9 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Hello world!
@@ -25,7 +27,7 @@ public class App
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.createContext("/employees", new ListEmployeesHandler());
-//        server.createContext("/employees/show/{id}", new ShowEmployeeHandler());
+        server.createContext("/employees/show", new ShowEmployeeHandler());
         server.createContext("/employees/create", new CreateEmployeeHandler());
 //
 //        server.createContext("/departments", new ListDepartmentsHandler());
@@ -56,7 +58,6 @@ public class App
             t.sendResponseHeaders(200, employees.toString().length());
             OutputStream os = t.getResponseBody();
 
-            System.out.println(employees.toString());
             os.write(employees.toString().getBytes());
 
             os.close();
@@ -74,5 +75,36 @@ public class App
             os.write(success.getBytes());
             os.close();
         }
+    }
+
+    static class ShowEmployeeHandler implements HttpHandler {
+        public void handle(HttpExchange t) throws IOException {
+
+            EmployeeRepository employeeRepository = EmployeeRepository.getInstance();
+            Map<String, String> params = queryToMap(t.getRequestURI().getQuery());
+            Integer id = Integer.parseInt(params.get("id"));
+            for (Employee employee:
+                 employeeRepository.getEmployees()) {
+                if(employee.getId()==id){
+                    t.sendResponseHeaders(200,employee.toString().length());
+                    OutputStream os = t.getResponseBody();
+                    os.write(employee.toString().getBytes());
+                    os.close();
+                    break;
+                }
+            }
+        }
+    }
+    public static Map<String, String> queryToMap(String query){
+        Map<String, String> result = new HashMap<String, String>();
+        for (String param : query.split("&")) {
+            String pair[] = param.split("=");
+            if (pair.length>1) {
+                result.put(pair[0], pair[1]);
+            }else{
+                result.put(pair[0], "");
+            }
+        }
+        return result;
     }
 }
